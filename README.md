@@ -17,9 +17,10 @@ FaceMood AI is a local web app that detects facial emotions from uploaded images
 ├── index.html
 ├── app.py
 ├── start.bat
+├── requirements.txt
 ├── best_efficientnet_b3.pth
-├── src/
-└── assets/
+└── src/
+    └── app.js
 ```
 
 ## Requirements

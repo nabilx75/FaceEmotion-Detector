@@ -1,6 +1,0 @@
-{
-  "name": "MoodLens",
-  "description": "Real-time AI-powered emotion detection app with playful interactive emotion guide and camera support.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
