@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MoodLens — Real-time AI Emotion Detector</title>
+    
+    <!-- Google Fonts for Fredoka and DM Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fredoka:wght@300..700&display=swap" rel="stylesheet" />
+    
+    <!-- Standalone browser Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["DM Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+              heading: ["Fredoka", "sans-serif"],
+            },
+            colors: {
+              slate: {
+                250: '#e5e9f0',
+                650: '#3b4354',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Embedded Theme styling for 100% standalone rendering -->
+    <style>
+      /* Glassmorphism theme values */
+      .glass-card {
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.04);
+      }
+
+      .font-fredoka {
+        font-family: 'Fredoka', 'Helvetica Neue', Arial, sans-serif;
+      }
+
+      .font-dmsans {
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      /* Float animations for background blobs */
+      @keyframes float1 {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(40px, -60px) scale(1.15); }
+        66% { transform: translate(-30px, 30px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+      }
+
+      @keyframes float2 {
+        0% { transform: translate(0px, 0px) scale(1.1); }
+        50% { transform: translate(-50px, 50px) scale(0.85); }
+        100% { transform: translate(0px, 0px) scale(1.1); }
+      }
+
+      @keyframes float3 {
+        0% { transform: translate(0px, 0px) scale(0.9); }
+        50% { transform: translate(60px, 40px) scale(1.1); }
+        100% { transform: translate(0px, 0px) scale(0.9); }
+      }
+
+      /* Slide up and down animation for tears */
+      @keyframes tear-drop {
+        0% { transform: translateY(0) scale(1); opacity: 0; }
+        10% { opacity: 1; }
+        80% { transform: translateY(12px) scale(1); opacity: 1; }
+        100% { transform: translateY(16px) scale(0.5); opacity: 0; }
+      }
+
+      /* Quivering fear brows */
+      @keyframes quiver {
+        0%, 100% { transform: translateY(0); }
+        25% { transform: translateY(-1.5px) rotate(11deg); }
+        50% { transform: translateY(1px) rotate(13deg); }
+        75% { transform: translateY(-1px) rotate(12deg); }
+      }
+
+      @keyframes quiver-reverse {
+        0%, 100% { transform: translateY(0); }
+        25% { transform: translateY(-1.5px) rotate(-11deg); }
+        50% { transform: translateY(1px) rotate(-13deg); }
+        75% { transform: translateY(-1px) rotate(-12deg); }
+      }
+
+      /* Mouth gasping pulse */
+      @keyframes gaspPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+
+      /* Nose twitch */
+      @keyframes twitch {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(1.1) rotate(3deg); }
+      }
+
+      /* Trigger classes */
+      .blob-1 {
+        animation: float1 18s infinite ease-in-out;
+      }
+      .blob-2 {
+        animation: float2 24s infinite ease-in-out;
+      }
+      .blob-3 {
+        animation: float3 20s infinite ease-in-out;
+      }
+
+      .animate-tear {
+        animation: tear-drop 2.5s infinite linear;
+      }
+
+      .quiver-brow {
+        animation: quiver 0.3s infinite ease-in-out;
+      }
+
+      .quiver-brow-rev {
+        animation: quiver-reverse 0.3s infinite ease-in-out;
+      }
+
+      .animate-gasp {
+        animation: gaspPulse 1s infinite ease-in-out;
+      }
+
+      .animate-twitch {
+        animation: twitch 0.6s infinite ease-in-out;
+      }
+
+      /* Webkit Bar container styling mapping */
+      .bar-container {
+        height: 8px;
+        background: #eee;
+        border-radius: 4px;
+        overflow: hidden;
+        width: 100%;
+      }
+
+      .bar-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+      }
+
+      /* Custom Scrollbar for playful layout */
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #B2BEC3;
+        border-radius: 9999px;
+        border: 3px solid transparent;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #A29BFE;
+      }
+    </style>
+  </head>
+  <body class="font-sans bg-[#f8f9ff] text-slate-900 relative min-h-screen overflow-x-hidden selection:bg-purple-200 selection:text-slate-900">
+    
+    <!-- Animated Soft Blobs in Background -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      <!-- Blob 1: Vibrant Pink-Purple -->
+      <div class="blob absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#ff7eb3] opacity-40 filter blur-[80px] blob-1"></div>
+      <!-- Blob 2: Vibrant Cyan-Sky -->
+      <div class="blob absolute top-1/2 -right-24 w-[32rem] h-[32rem] rounded-full bg-[#7afcff] opacity-40 filter blur-[80px] blob-2"></div>
+      <!-- Blob 3: Vibrant Soft Purple -->
+      <div class="blob absolute bottom-12 left-1/4 w-96 h-96 rounded-full bg-[#A29BFE] opacity-30 filter blur-[80px] blob-3"></div>
+    </div>
+
+    <!-- Content Wrapper (Relatively positioned over blobs) -->
+    <div class="relative z-10 max-w-6xl mx-auto px-4 py-8 md:py-12 space-y-10">
+      
+      <!-- 1. Hero / Header Section (Vibrant Palette style with right-side descriptive italic tag) -->
+      <header class="relative z-10 flex flex-col md:flex-row md:justify-between md:items-end gap-4 pb-4 border-b border-black/[0.04] shrink-0">
+        <div>
+          <div class="inline-flex items-center gap-2 mb-2">
+            <span class="text-3xl">🔮</span>
+            <h1 id="app-title" class="font-heading text-4xl font-semibold text-[#2D3436]">
+              MoodLens
+            </h1>
+          </div>
+          <p class="text-[#636E72] font-sans text-xs md:text-sm uppercase tracking-wider font-bold">
+            Real-time emotion detection powered by AI
+          </p>
+        </div>
+        <div class="text-left md:text-right max-w-sm text-xs text-[#636E72]/80 font-sans italic leading-relaxed">
+          Experience how neural networks perceive human sentiment through facial landmarks and micro-expressions in real-time.
+        </div>
+      </header>
+
+      <!-- 2. Emotion Guide Section (Playful Grid of 7 Emotions) -->
+      <section id="emotion-guide" class="space-y-6">
+        <div class="text-center">
+          <h2 class="font-heading text-2xl md:text-3xl font-bold text-slate-800">The Expression Guide</h2>
+          <p class="text-sm md:text-base text-slate-500 max-w-md mx-auto">Get to know the 7 primary facial indicators of human emotion classified by our AI engine.</p>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 md:gap-4 shrink-0">
+          
+          <!-- Card 1: Happy -->
+          <div class="group glass-card rounded-2xl p-3.5 flex flex-col items-center text-center space-y-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <!-- CSS Face Happy -->
+            <div class="mood-face bg-[#FFD166] border border-black/10 rounded-full relative w-12 h-12 shadow-sm transition-all duration-300 group-hover:scale-115 flex items-center justify-center overflow-hidden">
+              <div class="absolute top-[30%] left-[22%] w-2 h-2 bg-slate-900 rounded-full"></div>
+              <div class="absolute top-[30%] right-[22%] w-2 h-2 bg-slate-900 rounded-full"></div>
+              <div class="absolute top-[48%] left-[12%] w-2 h-1.5 bg-pink-400/60 rounded-full filter blur-[1px]"></div>
+              <div class="absolute top-[48%] right-[12%] w-2 h-1.5 bg-pink-400/60 rounded-full filter blur-[1px]"></div>
+              <div class="absolute top-[46%] w-7 h-3.5 bg-slate-900 rounded-b-full overflow-hidden border border-slate-900">
+                <div class="w-5 h-1 bg-white rounded-full mx-auto mt-0"></div>
+                <div class="w-3 h-2 bg-rose-450 rounded-full mx-auto mt-0.5"></div>
+              </div>
+            </div>
+            <div class="space-y-1 flex-1 flex flex-col justify-between w-full">
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-[#2D3436]">Happy</h3>
+                <p class="text-[10px] text-gray-500 leading-snug">Raised cheeks, wide smile, squinted eyes.</p>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 bg-[#FFD166] text-white text-[9px] font-bold uppercase rounded-full tracking-wider self-center">
+                Joyful
+              </span>
+            </div>
+          </div>
+
+          <!-- Card 2: Sad -->
+          <div class="group glass-card rounded-2xl p-3.5 flex flex-col items-center text-center space-y-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <!-- CSS Face Sad -->
+            <div class="mood-face bg-[#74B9FF] border border-black/10 rounded-full relative w-12 h-12 shadow-sm transition-all duration-300 group-hover:scale-115">
+              <!-- Brows -->
+              <div class="absolute top-[22%] left-[22%] w-2.5 h-0.5 bg-slate-900 rounded-full rotate-12"></div>
+              <div class="absolute top-[22%] right-[22%] w-2.5 h-0.5 bg-slate-900 rounded-full -rotate-12"></div>
+              <div class="absolute top-[34%] left-[25%] w-2 h-1.5 bg-slate-900 rounded-b-full"></div>
+              <div class="absolute top-[34%] right-[25%] w-2 h-1.5 bg-slate-900 rounded-b-full"></div>
+              <div class="absolute top-[48%] left-[24%] w-1 h-2 bg-cyan-200 rounded-tr-full rounded-b-full animate-tear"></div>
+              <div class="absolute top-[56%] left-[30%] w-5 h-2 border-t border-slate-900 rounded-t-full"></div>
+            </div>
+            <div class="space-y-1 flex-1 flex flex-col justify-between w-full">
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-[#2D3436]">Sad</h3>
+                <p class="text-[10px] text-gray-500 leading-snug">Inner brows raised, downturned mouth.</p>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 bg-[#74B9FF] text-white text-[9px] font-bold uppercase rounded-full tracking-wider self-center">
+                Melancholic
+              </span>
+            </div>
+          </div>
+
+          <!-- Card 3: Angry -->
+          <div class="group glass-card rounded-2xl p-3.5 flex flex-col items-center text-center space-y-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <!-- CSS Face Angry -->
+            <div class="mood-face bg-[#FF6B6B] border border-black/10 rounded-full relative w-12 h-12 shadow-sm transition-all duration-300 group-hover:scale-115">
+              <div class="absolute top-[22%] left-[20%] w-3 h-0.5 bg-slate-900 rounded-full -rotate-12"></div>
+              <div class="absolute top-[22%] right-[20%] w-3 h-0.5 bg-slate-900 rounded-full rotate-12"></div>
+              <div class="absolute top-[32%] left-[22%] w-2.5 h-2 bg-white border border-slate-900 rounded-full flex items-center justify-center -rotate-6">
+                <div class="w-1 h-1 bg-slate-900 rounded-full"></div>
+              </div>
+              <div class="absolute top-[32%] right-[22%] w-2.5 h-2 bg-white border border-slate-900 rounded-full flex items-center justify-center rotate-6">
+                <div class="w-1 h-1 bg-slate-900 rounded-full"></div>
+              </div>
+              <div class="absolute top-[58%] left-[34%] w-4 h-1.5 bg-slate-900 rounded border border-slate-900 overflow-hidden flex items-center justify-center">
+                <div class="w-full h-[1px] bg-white"></div>
+              </div>
+            </div>
+            <div class="space-y-1 flex-1 flex flex-col justify-between w-full">
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-[#2D3436]">Angry</h3>
+                <p class="text-[10px] text-gray-500 leading-snug">Lowered brows, tense lips, glaring eyes.</p>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 bg-[#FF6B6B] text-white text-[9px] font-bold uppercase rounded-full tracking-wider self-center">
+                Furious
+              </span>
+            </div>
+          </div>
+
+          <!-- Card 4: Fear -->
+          <div class="group glass-card rounded-2xl p-3.5 flex flex-col items-center text-center space-y-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <!-- CSS Face Fear -->
+            <div class="mood-face bg-[#A29BFE] border border-black/10 rounded-full relative w-12 h-12 shadow-sm transition-all duration-300 group-hover:scale-115">
+              <div class="absolute top-[18%] left-[20%] w-3 h-0.5 bg-slate-900 rounded-full -rotate-12 quiver-brow"></div>
+              <div class="absolute top-[18%] right-[20%] w-3 h-0.5 bg-slate-900 rounded-full rotate-12 quiver-brow-rev"></div>
+              <div class="absolute top-[28%] left-[20%] w-3 h-3 bg-white border border-slate-900 rounded-full flex items-center justify-center">
+                <div class="w-1 h-1 bg-slate-900 rounded-full"></div>
+              </div>
+              <div class="absolute top-[28%] right-[20%] w-3 h-3 bg-white border border-slate-900 rounded-full flex items-center justify-center">
+                <div class="w-1 h-1 bg-slate-900 rounded-full"></div>
+              </div>
+              <div class="absolute top-[56%] left-[34%] w-4 h-3 bg-slate-900 rounded-full animate-gasp border border-slate-900"></div>
+            </div>
+            <div class="space-y-1 flex-1 flex flex-col justify-between w-full">
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-[#2D3436]">Fear</h3>
+                <p class="text-[10px] text-gray-500 leading-snug">Raised brows, widened eyes, open mouth.</p>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 bg-[#A29BFE] text-white text-[9px] font-bold uppercase rounded-full tracking-wider self-center">
+                Anxious
+              </span>
+            </div>
+          </div>
+
+          <!-- Card 5: Disgust -->
+          <div class="group glass-card rounded-2xl p-3.5 flex flex-col items-center text-center space-y-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <!-- CSS Face Disgust -->
+            <div class="mood-face bg-[#55EFC4] border border-black/10 rounded-full relative w-12 h-12 shadow-sm transition-all duration-300 group-hover:scale-115">
+              <div class="absolute top-[22%] left-[22%] w-2 h-0.5 bg-slate-900 rounded-full rotate-6"></div>
+              <div class="absolute top-[22%] right-[22%] w-2 h-0.5 bg-slate-900 rounded-full -rotate-6"></div>
+              <div class="absolute top-[34%] left-[25%] w-2 h-0.5 bg-slate-900 rotate-45">
+                <div class="absolute top-0 left-0 w-2 h-0.5 bg-slate-900 -rotate-90"></div>
+              </div>
+              <div class="absolute top-[34%] right-[25%] w-2 h-0.5 bg-slate-900 -rotate-45">
+                <div class="absolute top-0 left-0 w-2 h-0.5 bg-slate-900 rotate-90"></div>
+              </div>
+              <div class="absolute top-[48%] left-[45%] w-1.5 h-0.5 border-t border-slate-900 rounded-full animate-twitch"></div>
+              <div class="absolute top-[56%] left-[28%] w-5 h-2 flex flex-col justify-center">
+                <div class="w-full h-0.5 bg-slate-900 rounded-full"></div>
+                <div class="w-1.5 h-1 bg-rose-400 rounded-b-full border-x border-slate-900 mx-auto -mt-0.5"></div>
+              </div>
+            </div>
+            <div class="space-y-1 flex-1 flex flex-col justify-between w-full">
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-[#2D3436]">Disgust</h3>
+                <p class="text-[10px] text-gray-500 leading-snug">Wrinkled nose, curled upper lip.</p>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 bg-[#55EFC4] text-white text-[9px] font-bold uppercase rounded-full tracking-wider self-center">
+                Aversive
+              </span>
+            </div>
+          </div>
+
+          <!-- Card 6: Surprise -->
+          <div class="group glass-card rounded-2xl p-3.5 flex flex-col items-center text-center space-y-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <!-- CSS Face Surprise -->
+            <div class="mood-face bg-[#FD79A8] border border-black/10 rounded-full relative w-12 h-12 shadow-sm transition-all duration-300 group-hover:scale-115">
+              <div class="absolute top-[12%] left-[20%] w-2 h-0.5 bg-slate-900 rounded-full -rotate-12"></div>
+              <div class="absolute top-[12%] right-[20%] w-2 h-0.5 bg-slate-900 rounded-full rotate-12"></div>
+              <div class="absolute top-[26%] left-[20%] w-3 h-3 bg-white border border-slate-900 rounded-full flex items-center justify-center">
+                <div class="w-1 h-1 bg-slate-900 rounded-full"></div>
+              </div>
+              <div class="absolute top-[26%] right-[20%] w-3 h-3 bg-white border border-slate-900 rounded-full flex items-center justify-center">
+                <div class="w-1 h-1 bg-slate-900 rounded-full"></div>
+              </div>
+              <div class="absolute top-[54%] left-[34%] w-4 h-4 bg-slate-900 rounded-full border border-slate-900 flex items-center justify-center overflow-hidden">
+                <div class="w-2.5 h-2 bg-rose-450 rounded-full mt-2"></div>
+              </div>
+            </div>
+            <div class="space-y-1 flex-1 flex flex-col justify-between w-full">
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-[#2D3436]">Surprise</h3>
+                <p class="text-[10px] text-gray-500 leading-snug">Arched brows, dropped jaw, wide eyes.</p>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 bg-[#FD79A8] text-white text-[9px] font-bold uppercase rounded-full tracking-wider self-center">
+                Stunned
+              </span>
+            </div>
+          </div>
+
+          <!-- Card 7: Neutral -->
+          <div class="group glass-card rounded-2xl p-3.5 flex flex-col items-center text-center space-y-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <!-- CSS Face Neutral -->
+            <div class="mood-face bg-[#B2BEC3] border border-black/10 rounded-full relative w-12 h-12 shadow-sm transition-all duration-300 group-hover:scale-115">
+              <div class="absolute top-[35%] left-[25%] w-2 h-2 bg-slate-900 rounded-full"></div>
+              <div class="absolute top-[35%] right-[25%] w-2 h-2 bg-slate-900 rounded-full"></div>
+              <div class="absolute top-[60%] left-[30%] w-5 h-0.5 bg-slate-900 rounded-full"></div>
+            </div>
+            <div class="space-y-1 flex-1 flex flex-col justify-between w-full">
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-[#2D3436]">Neutral</h3>
+                <p class="text-[10px] text-gray-500 leading-snug">Relaxed face, straight horizontal mouth.</p>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 bg-[#B2BEC3] text-white text-[9px] font-bold uppercase rounded-full tracking-wider self-center">
+                Calm
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 3. Detector Section -->
+      <section id="detector" class="grid md:grid-cols-12 gap-6 items-start">
+        
+        <!-- Tab Control & Input Area (Left cols) -->
+        <div class="md:col-span-7 glass-card rounded-3xl p-5 md:p-6 shadow-md space-y-6">
+          
+          <!-- Tab Selector Header -->
+          <div class="flex items-center justify-between border-b border-black/5 pb-4">
+            <h2 class="font-heading text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <span>⚡</span> Real-time AI Scan
+            </h2>
+            
+            <div class="flex p-1 bg-slate-100/80 rounded-2xl border border-slate-200">
+              <button id="tab-camera-btn" class="px-3 md:px-4 py-2 font-heading font-bold text-sm rounded-xl transition-all duration-300 bg-white text-slate-900 shadow-sm cursor-pointer">
+                📷 Live Camera
+              </button>
+              <button id="tab-upload-btn" class="px-3 md:px-4 py-2 font-heading font-bold text-sm rounded-xl transition-all duration-300 text-slate-600 hover:text-slate-900 cursor-pointer">
+                🖼️ Upload Image
+              </button>
+            </div>
+          </div>
+
+          <!-- Camera Tab Area -->
+          <div id="camera-area" class="space-y-5">
+            <div class="relative w-full aspect-video md:aspect-[4/3] bg-[#1a1c23] rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center">
+              
+              <!-- Video Steam Output -->
+              <video id="webcam-video" autoplay playsinline muted class="w-full h-full object-cover -scale-x-100 hidden"></video>
+              
+              <!-- Placeholders & Connect screen -->
+              <div id="camera-placeholder" class="text-center px-4 space-y-4">
+                <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto border border-slate-700 animate-pulse">
+                  <span class="text-2xl text-slate-400">📷</span>
+                </div>
+                <div>
+                  <h4 class="font-heading font-bold text-slate-200 text-base">Awaiting Camera Connection</h4>
+                  <p class="text-slate-400 text-xs mt-1">Please allow camera permissions when prompted.</p>
+                </div>
+                <button id="btn-start-camera" class="px-5 py-2 w-full max-w-xs bg-gradient-to-r from-pink-500 to-indigo-500 hover:from-pink-650 hover:to-indigo-650 font-heading font-bold text-white text-xs rounded-xl shadow-md active:scale-95 transition-all duration-150 cursor-pointer">
+                  Enable Camera
+                </button>
+              </div>
+
+              <!-- Camera Error Details (Secure origins lock, etc.) -->
+              <div id="camera-error-message" class="hidden text-center px-6 max-w-sm space-y-3">
+                <span class="text-3xl">⚠️</span>
+                <h4 class="font-heading font-bold text-red-600 text-base">Permission Check Failed</h4>
+                <p id="camera-error-txt" class="text-slate-400 text-xs leading-relaxed">
+                  Could not access camera. Please make sure camera is not used by another app, or try uploading an image instead.
+                </p>
+              </div>
+            </div>
+
+            <button id="btn-detect-camera" disabled class="w-full py-4 bg-gradient-to-r from-pink-500 to-indigo-600 text-white rounded-2xl font-heading font-bold text-lg shadow-lg shadow-indigo-100 hover:shadow-indigo-200 active:scale-95 transition-all duration-150 cursor-pointer opacity-50 cursor-not-allowed">
+              📸 Detect Emotion Now
+            </button>
+          </div>
+
+          <!-- Upload Tab Area -->
+          <div id="upload-area" class="hidden space-y-5">
+            <div id="dropzone" class="w-full aspect-video md:aspect-[4/3] bg-slate-50/50 hover:bg-indigo-50/30 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl flex flex-col items-center justify-center text-center p-6 cursor-pointer group transition-all duration-300">
+              
+              <!-- Prompt UI -->
+              <div id="dropzone-prompt" class="space-y-4">
+                <div class="w-16 h-16 bg-white border border-slate-200 group-hover:border-indigo-300 rounded-2xl flex items-center justify-center mx-auto shadow-sm group-hover:scale-110 transition-transform duration-300">
+                  <span class="text-3xl text-slate-400 group-hover:text-indigo-400">🖼️</span>
+                </div>
+                <div>
+                  <h4 class="font-heading font-bold text-slate-800 text-base">Drag & drop your portrait here</h4>
+                  <p class="text-slate-400 text-xs mt-1">supports PNG, JPG or JPEG. or click-to-browse files.</p>
+                </div>
+              </div>
+              
+              <!-- Upload Action file picker (Hidden) -->
+              <input id="file-input" type="file" accept="image/*" class="hidden" />
+
+              <!-- Uploaded preview image panel -->
+              <div id="upload-preview-container" class="hidden relative w-full h-full flex items-center justify-center">
+                <img id="upload-preview-img" class="max-w-full max-h-full object-contain rounded-xl border border-slate-200" src="" alt="Preview upload" />
+              </div>
+
+            </div>
+
+            <!-- Double trigger actions for Upload -->
+            <div class="grid grid-cols-2 gap-4">
+              <button id="btn-clear-upload" class="py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-heading font-bold text-sm rounded-xl border border-slate-250 transition-colors active:scale-95 cursor-pointer">
+                🧹 Reset Image
+              </button>
+              <button id="btn-detect-upload" disabled class="py-3.5 bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-650 hover:to-indigo-650 disabled:from-indigo-350 disabled:to-indigo-350 text-white font-heading font-bold text-sm rounded-xl shadow-md transition-all duration-150 active:scale-95 opacity-50 cursor-not-allowed">
+                Predict Emotion
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Predict Output Display Panel (Right cols) -->
+        <div class="md:col-span-5 glass-card rounded-3xl p-5 md:p-6 shadow-md aspect-auto md:min-h-[460px] flex flex-col justify-center">
+          
+          <!-- State A: Awaiting Output Details -->
+          <div id="results-placeholder" class="text-center px-4 py-8 space-y-4">
+            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto border border-slate-200 rotate-12">
+              <span class="text-3xl">🧭</span>
+            </div>
+            <div>
+              <h3 class="font-heading font-bold text-slate-800 text-lg">Prediction Console</h3>
+              <p class="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed mt-1">
+                Your prediction results will appear here. Start your webcam feed or drop a file to process expressions.
+              </p>
+            </div>
+          </div>
+
+          <!-- State B: Request Loading animation -->
+          <div id="results-loader" class="hidden text-center py-10 space-y-6">
+            <div class="relative w-20 h-20 mx-auto">
+              <!-- Animated outer pulse -->
+              <div class="absolute inset-0 rounded-full bg-indigo-100 border-4 border-indigo-400 border-t-indigo-600 animate-spin"></div>
+              <!-- Inner spinning star shape -->
+              <div class="absolute inset-2 bg-white rounded-full flex items-center justify-center shadow-md">
+                <span class="text-2xl animate-pulse">🔮</span>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <h4 class="font-heading font-bold text-slate-800 text-base animate-pulse">Deconstructive Scanning...</h4>
+              <p class="text-slate-400 text-xs">Analyzing micro-expression geometries via neural network.</p>
+            </div>
+          </div>
+
+          <!-- State C: Displaying Predict success details -->
+          <div id="results-content" class="hidden space-y-6">
+            
+            <!-- Top class visualization -->
+            <div class="text-center space-y-2 border-b border-black/5 pb-5">
+              <span class="text-[#636E72] font-semibold text-[10px] uppercase tracking-wider block font-dmsans">Primary Detected State</span>
+              <div id="res-emoji" class="text-6xl md:text-7xl select-none transition-transform duration-300 hover:scale-110 cursor-pointer inline-block">
+                😄
+              </div>
+              <h3 id="res-label" class="font-heading text-2xl md:text-3xl font-semibold text-[#2D3436]">
+                Happy
+              </h3>
+              <div class="inline-block px-3 py-1 bg-indigo-600 text-white font-dmsans text-xs font-bold rounded-full shadow-sm" id="res-confidence">
+                94.2% Confidence
+              </div>
+            </div>
+
+            <!-- Complete Class breakdown bar scales -->
+            <div class="space-y-4">
+              <h4 class="font-heading font-bold text-slate-700 text-sm">Full Sentiment Breakdown</h4>
+              <div id="bar-charts-container" class="space-y-3">
+                <!-- Programmatically generated by app.js -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- State D: Fail state / Networking checks -->
+          <div id="results-error" class="hidden text-center py-8 space-y-4">
+            <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto border-2 border-red-300">
+              <span class="text-3xl">🧩</span>
+            </div>
+            <div class="space-y-1">
+              <h3 class="font-heading font-bold text-red-500 text-lg">Inference Stalled</h3>
+              <p class="text-slate-500 text-xs leading-relaxed max-w-xs mx-auto">
+                Unable to contact the prediction endpoint. Please ensure the backend is active.
+              </p>
+            </div>
+            <div class="p-3 bg-red-50 border border-red-200 rounded-lg max-w-xs mx-auto text-left">
+              <code id="error-details" class="text-[10px] font-mono text-red-650 break-all leading-normal block">
+                Failed to fetch ...
+              </code>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- Vite builds app entry-point script module -->
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>
